@@ -1,0 +1,6 @@
+{
+  "version": 2,
+  "framework": null,
+  "_buildCommand": "echo 'Static Deployment'",
+  "outputDirectory": "frontend"
+}
