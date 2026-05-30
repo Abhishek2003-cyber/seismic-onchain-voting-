@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Seismic Testnet Governance Dashboard - Secure, high-performance decentralized voting portal with sub-second finality.">
+  <title>Seismic Vote - Governance Dashboard</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #030712;
+      --card-bg: rgba(17, 24, 39, 0.7);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-hover: rgba(249, 115, 22, 0.4);
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #f97316;
+      --accent-glow: rgba(249, 115, 22, 0.15);
+      --accent-gradient: linear-gradient(135deg, #f97316 0%, #ec4899 100%);
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --indigo: #6366f1;
+      --cyan: #06b6d4;
+      --font-display: 'Outfit', sans-serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #374151; }
+
+    html { overflow-x: hidden; width: 100%; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      background-color: var(--bg);
+      font-family: var(--font-body);
+      color: var(--text);
+      position: relative;
+    }
+
+    /* ===== THREE.JS CANVAS ===== */
+    #three-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Hero icosahedron container — positioned near hero section */
+    #hero-3d-mount {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ===== AMBIENT BG ===== */
+    .ambient-background {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glowing-orb {
+      position: absolute;
+      width: 400px; height: 400px;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      opacity: 0.35;
+      animation: orbFloat 25s infinite alternate ease-in-out;
+    }
+    .orb-orange {
+      background: radial-gradient(circle, rgba(249, 115, 22, 0.2) 0%, rgba(0,0,0,0) 70%);
+      top: 15%; left: -100px;
+    }
+    .orb-cyan {
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, rgba(0,0,0,0) 70%);
+      bottom: 20%; right: -100px;
+      animation-delay: -10s;
+    }
+
+    @keyframes orbFloat {
+      0% { transform: translateY(0) scale(1); }
+      100% { transform: translateY(50px) scale(1.2); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 120px 24px 60px;
+    }
+
+    /* ===== NAVBAR ===== */
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 96px;
+      background: rgba(3, 7, 18, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-color);
+      z-index: 100;
+      padding: 0 24px;
+    }
+
+    .navbar-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%; max-width: 1280px;
+      margin: 0 auto; height: 100%;
+    }
+
+    .nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    
+    .nav-logo {
+      width: 80px; height: 80px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.35);
+      position: relative; overflow: hidden;
+      padding: 2px;
+    }
+    .nav-logo img { width: auto; height: 100%; max-height: 100%; display: block; }
+    .nav-logo::after { display: none; }
+    @keyframes logoShine { 100% { transform: translateX(100%); } }
+
+    .nav-title {
+      font-family: var(--font-display);
+      font-size: 1.4rem; font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(to right, #ffffff, #e5e7eb);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .nav-title span {
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-actions { display: flex; align-items: center; gap: 16px; }
+
+    .network-pill {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(31, 41, 55, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 0.85rem; font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .network-pill:hover { border-color: rgba(249, 115, 22, 0.3); background: rgba(31, 41, 55, 0.8); color: var(--text); }
+    .network-pill.wrong-chain { border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.08); color: var(--error); animation: pulseAlert 2s infinite; }
+    .network-pill.correct-chain { border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.06); color: var(--success); }
+
+    @keyframes pulseAlert { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); } }
+
+    .pulse-dot { width: 8px; height: 8px; background-color: var(--text-muted); border-radius: 50%; display: inline-block; }
+    .wrong-chain .pulse-dot { background-color: var(--error); }
+    .correct-chain .pulse-dot { background-color: var(--success); box-shadow: 0 0 8px var(--success); animation: greenPulse 2.5s infinite; }
+
+    @keyframes greenPulse {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+      70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .connect-btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--accent-gradient);
+      border: none; color: #fff;
+      font-family: var(--font-body);
+      font-size: 0.9rem; font-weight: 700;
+      padding: 10px 22px; border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(249, 115, 22, 0.2);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .connect-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4); }
+    .connect-btn:active { transform: translateY(0); }
+
+    .wallet-badge {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 6px 6px 6px 16px;
+      font-size: 0.9rem; font-weight: 600;
+    }
+    .wallet-balance { color: var(--accent); font-weight: 700; font-family: var(--font-mono); background: rgba(249, 115, 22, 0.08); padding: 4px 10px; border-radius: 8px; }
+    .wallet-address { color: var(--text); font-family: var(--font-mono); background: #1f2937; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+
+    /* ===== HERO ===== */
+    .hero {
+      text-align: center;
+      margin: 48px 0 40px;
+      position: relative;
+    }
+
+    /* Floating 3D canvas inside hero */
+    .hero-canvas-wrap {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px; height: 400px;
+      pointer-events: none;
+      z-index: -1;
+      opacity: 0.6;
+    }
+
+    #hero-canvas {
+      width: 100%; height: 100%;
+    }
+
+    .hero-pretitle {
+      font-family: var(--font-mono);
+      font-size: 0.85rem; font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+      display: inline-block;
+    }
+
+    h1.hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 5vw, 3.8rem);
+      font-weight: 850;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #ffffff 0%, #9ca3af 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      max-width: 600px;
+      margin: 0 auto;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      line-height: 1.6;
+    }
+
+    /* ===== STATS ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 48px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 24px;
+      display: flex; align-items: center; gap: 20px;
+      transition: all 0.3s ease;
+      position: relative; overflow: hidden;
+    }
+    .stat-card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.15); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2); }
+    .stat-icon { width: 52px; height: 52px; border-radius: 14px; background: rgba(259, 115, 22, 0.06); border: 1px solid rgba(259, 115, 22, 0.1); display: flex; align-items: center; justify-content: center; color: var(--accent); }
+    .stat-card:nth-child(2) .stat-icon { background: rgba(6, 182, 212, 0.06); border-color: rgba(6, 182, 212, 0.15); color: var(--cyan); }
+    .stat-card:nth-child(3) .stat-icon { background: rgba(16, 185, 129, 0.06); border-color: rgba(16, 185, 129, 0.15); color: var(--success); }
+    .stat-card:nth-child(4) .stat-icon { background: rgba(99, 102, 241, 0.06); border-color: rgba(99, 102, 241, 0.15); color: var(--indigo); }
+
+    .stat-details { display: flex; flex-direction: column; }
+    .stat-value { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; color: var(--text); }
+    .stat-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
+
+    .stat-action-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--text); text-decoration: none;
+      font-size: 0.8rem; font-weight: 700;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 6px 12px; border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin-top: 8px; align-self: flex-start;
+      transition: all 0.2s ease;
+    }
+    .stat-action-btn:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255,255,255,0.2); }
+
+    /* ===== PANELS ===== */
+    .grid-main {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 32px;
+      margin-bottom: 48px;
+    }
+    @media (min-width: 1024px) { .grid-main { grid-template-columns: 3fr 2fr; } }
+
+    .panel {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      padding: 32px;
+      position: relative; overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+    .panel::before {
+      content: '';
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 4px;
+      background: var(--accent-gradient);
+    }
+
+    .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .panel-title { font-family: var(--font-display); font-size: 1.25rem; font-weight: 750; display: flex; align-items: center; gap: 10px; }
+    .panel-title i { color: var(--accent); }
+
+    /* ===== FORM ===== */
+    .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .input-group label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .input-field-wrap { position: relative; display: flex; align-items: center; }
+    .input-field-wrap i { position: absolute; left: 16px; color: var(--text-muted); pointer-events: none; }
+    input[type="text"] { width: 100%; padding: 14px 16px 14px 46px; background: rgba(31, 41, 55, 0.4); border: 1px solid var(--border-color); border-radius: 14px; color: var(--text); font-family: inherit; font-size: 0.95rem; transition: all 0.2s ease; }
+    input[type="text"]:focus { outline: none; border-color: var(--accent); background: rgba(31, 41, 55, 0.6); box-shadow: 0 0 12px var(--accent-glow); }
+
+    .btn-row { display: flex; gap: 12px; margin-top: 10px; }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 28px; border-radius: 12px; font-family: var(--font-body); font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: none; }
+    .btn-primary { background: var(--accent-gradient); color: #fff; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.2); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(249, 115, 22, 0.35); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-secondary { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: var(--text); }
+    .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.15); }
+
+    .pfp-preview-container { display: flex; align-items: center; gap: 16px; background: rgba(31, 41, 55, 0.3); padding: 16px; border-radius: 14px; border: 1px solid var(--border-color); margin-bottom: 20px; display: none; }
+    .pfp-preview-img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+    .pfp-preview-info { display: flex; flex-direction: column; }
+    .pfp-preview-name { font-size: 0.9rem; font-weight: 700; }
+    .pfp-preview-status { font-size: 0.75rem; color: var(--success); display: flex; align-items: center; gap: 4px; }
+
+    /* ===== RULES CARD ===== */
+    .rules-card {
+      background: linear-gradient(135deg, rgba(17, 24, 39, 0.7) 0%, rgba(99, 102, 241, 0.05) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      padding: 32px;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .rule-item { display: flex; gap: 16px; }
+    .rule-bullet { width: 28px; height: 28px; border-radius: 8px; background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.2); display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
+    .rule-content { display: flex; flex-direction: column; gap: 4px; }
+    .rule-title { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+    .rule-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+
+    /* ===== SECTION HEADER ===== */
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; }
+    .section-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 12px; }
+    .section-title i { color: var(--accent); }
+    .section-count { font-size: 0.85rem; font-family: var(--font-mono); background: rgba(31, 41, 55, 0.6); border: 1px solid var(--border-color); padding: 4px 12px; border-radius: 999px; color: var(--accent); font-weight: 700; }
+
+    /* ===== CANDIDATES ===== */
+    .candidates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 28px; margin-bottom: 48px; }
+
+    .candidate-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      padding: 28px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative; overflow: hidden;
+      display: flex; flex-direction: column; height: 100%;
+    }
+    .candidate-card:hover { transform: translateY(-8px); border-color: var(--border-hover); box-shadow: 0 16px 36px rgba(249, 115, 22, 0.1); }
+    .candidate-card::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.03), transparent 70%); pointer-events: none; }
+
+    .card-top { display: flex; align-items: center; gap: 18px; margin-bottom: 20px; }
+    .candidate-avatar-wrap { position: relative; flex-shrink: 0; }
+    .candidate-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2.5px solid #1f2937; background: #1f2937; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: all 0.3s ease; }
+    .candidate-card:hover .candidate-avatar { border-color: var(--accent); transform: scale(1.05); box-shadow: 0 0 12px var(--accent-glow); }
+    .candidate-online-badge { position: absolute; bottom: 2px; right: 2px; width: 14px; height: 14px; background: var(--success); border: 2px solid var(--bg); border-radius: 50%; }
+    .candidate-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .candidate-name { font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .candidate-address { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; background: rgba(31, 41, 55, 0.5); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border-color); width: fit-content; cursor: pointer; transition: all 0.2s ease; }
+    .candidate-address:hover { background: rgba(31, 41, 55, 0.8); color: var(--text); }
+
+    .votes-display { margin-top: auto; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 16px; padding: 16px; margin-bottom: 20px; }
+    .votes-count-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+    .votes-val { font-family: var(--font-display); font-size: 1.8rem; font-weight: 800; color: var(--accent); display: flex; align-items: baseline; gap: 4px; }
+    .votes-val span { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); font-family: var(--font-body); }
+    .votes-percent { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; color: var(--cyan); }
+
+    .progress-bar-bg { height: 8px; background: #111827; border-radius: 99px; overflow: hidden; position: relative; }
+    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #f97316 0%, #ec4899 100%); border-radius: 99px; width: 0%; transition: width 0.8s cubic-bezier(0.1, 0.8, 0.25, 1); position: relative; }
+    .progress-bar-fill::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent); animation: progressShine 2s infinite; }
+    @keyframes progressShine { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+    .btn-vote { width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: var(--text); font-family: var(--font-body); font-size: 0.9rem; font-weight: 700; padding: 12px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    .btn-vote:hover { background: var(--accent-gradient); border-color: transparent; color: #fff; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.25); transform: translateY(-2px); }
+    .btn-vote:active { transform: translateY(0); }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state { grid-column: 1/-1; text-align: center; padding: 64px 32px; background: var(--card-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border-color); border-radius: 24px; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+    .empty-state i { color: var(--accent); }
+    .empty-title { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--text); }
+    .empty-desc { font-size: 0.85rem; max-width: 320px; margin: 0 auto; line-height: 1.5; }
+
+    /* ===== TERMINAL ===== */
+    .terminal-container { background: #090d16; border: 1px solid var(--border-color); border-radius: 20px; overflow: hidden; margin-top: 48px; box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4); }
+    .terminal-header { background: #0f172a; padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; }
+    .terminal-title { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: var(--text-muted); display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .terminal-title i { color: var(--accent); }
+    .terminal-dots { display: flex; gap: 6px; }
+    .terminal-dot { width: 10px; height: 10px; border-radius: 50%; background: #374151; }
+    .terminal-dot-red { background: #ef4444; }
+    .terminal-dot-yellow { background: #f59e0b; }
+    .terminal-dot-green { background: #10b981; }
+    .terminal-body { padding: 20px; min-height: 160px; max-height: 260px; overflow-y: auto; font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.6; background: #05070c; }
+    .log-line { margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.01); padding-bottom: 6px; word-break: break-all; }
+    .log-time { color: #4b5563; }
+    .log-badge { font-weight: 700; margin-right: 6px; }
+    .log-info { color: var(--text); }
+    .log-info .log-badge { color: var(--cyan); }
+    .log-success { color: var(--success); }
+    .log-success .log-badge { color: #059669; }
+    .log-error { color: var(--error); }
+    .log-error .log-badge { color: #dc2626; }
+    .log-warn { color: var(--warning); }
+    .log-warn .log-badge { color: #d97706; }
+
+    .spin-slow { animation: spin 3s infinite linear; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* ===== TOASTS ===== */
+    .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 12px; max-width: 380px; width: 100%; }
+    .toast { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border-color); border-radius: 16px; padding: 16px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); display: flex; gap: 12px; align-items: flex-start; position: relative; overflow: hidden; animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes toastIn { 0% { transform: translateY(20px) scale(0.95); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+    @keyframes toastOut { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(20px) scale(0.95); opacity: 0; } }
+    .toast::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent); }
+    .toast-success::before { background: var(--success); }
+    .toast-error::before { background: var(--error); }
+    .toast-loading::before { background: var(--indigo); }
+    .toast-icon { flex-shrink: 0; margin-top: 2px; }
+    .toast-success .toast-icon { color: var(--success); }
+    .toast-error .toast-icon { color: var(--error); }
+    .toast-loading .toast-icon { color: var(--indigo); }
+    .toast-info .toast-icon { color: var(--cyan); }
+    .toast-content { flex-grow: 1; }
+    .toast-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .toast-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
+    .toast-close { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 2px; transition: color 0.2s ease; }
+    .toast-close:hover { color: var(--text); }
+
+    /* ===== FOOTER ===== */
+    .footer { text-align: center; margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.8rem; }
+    .footer-links { display: flex; justify-content: center; gap: 20px; margin-top: 10px; }
+    .footer-link { color: var(--text-muted); text-decoration: none; transition: color 0.2s ease; }
+    .footer-link:hover { color: var(--accent); }
+
+    /* ===== CONTRACT BANNER ===== */
+    .contract-missing-banner { background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(239, 68, 68, 0.1); animation: bannerPulse 3s infinite alternate ease-in-out; }
+    @keyframes bannerPulse { 0% { border-color: rgba(239, 68, 68, 0.3); } 100% { border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 10px 30px rgba(239, 68, 68, 0.15); } }
+    .banner-content { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .banner-icon { color: var(--error); width: 28px; height: 28px; flex-shrink: 0; }
+    .banner-text { flex: 1; font-size: 0.92rem; line-height: 1.5; color: #fca5a5; }
+    .btn-deploy-contract { background: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); padding: 10px 20px !important; border: none; border-radius: 12px; color: #fff; font-family: var(--font-body); font-size: 0.88rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease; }
+    .btn-deploy-contract:hover { box-shadow: 0 8px 25px rgba(239, 68, 68, 0.5); transform: translateY(-2px); }
+
+    /* ===== CANDIDATES SECTION LAYOUT ===== */
+    .candidates-section-layout { display: grid; grid-template-columns: 1fr; gap: 32px; margin-bottom: 48px; align-items: start; }
+    @media (min-width: 1024px) { .candidates-section-layout { grid-template-columns: 1fr 2.2fr; } }
+
+    .leaderboard-panel { padding: 28px !important; height: 100%; display: flex; flex-direction: column; }
+    .leaderboard-list { display: flex; flex-direction: column; gap: 12px; }
+    .leaderboard-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: rgba(31, 41, 55, 0.3); border: 1px solid var(--border-color); border-radius: 16px; transition: all 0.3s ease; position: relative; overflow: hidden; }
+    .leaderboard-item:hover { background: rgba(31, 41, 55, 0.5); border-color: rgba(255, 255, 255, 0.15); transform: translateX(4px); }
+    .rank-badge { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem; font-family: var(--font-display); flex-shrink: 0; background: #1f2937; color: var(--text-muted); border: 1px solid var(--border-color); }
+    .rank-1 .rank-badge { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #fff; border: none; box-shadow: 0 0 12px rgba(245, 158, 11, 0.35); }
+    .rank-2 .rank-badge { background: linear-gradient(135deg, #9ca3af 0%, #4b5563 100%); color: #fff; border: none; box-shadow: 0 0 10px rgba(156, 163, 175, 0.25); }
+    .rank-3 .rank-badge { background: linear-gradient(135deg, #b45309 0%, #78350f 100%); color: #fff; border: none; box-shadow: 0 0 8px rgba(180, 83, 9, 0.25); }
+    .leaderboard-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1.5px solid #374151; flex-shrink: 0; }
+    .rank-1 .leaderboard-avatar { border-color: #f59e0b; }
+    .leaderboard-meta { flex: 1; display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+    .leaderboard-name { font-weight: 700; font-size: 0.9rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .leaderboard-votes-wrap { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; gap: 2px; }
+    .leaderboard-votes { font-family: var(--font-mono); font-weight: 700; font-size: 0.95rem; color: var(--accent); }
+    .leaderboard-votes span { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; font-family: var(--font-body); }
+    .leaderboard-percentage { font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono); }
+    .leaderboard-progress-bg { position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: rgba(255, 255, 255, 0.02); }
+    .leaderboard-progress-fill { height: 100%; background: var(--accent-gradient); opacity: 0.3; transition: width 0.8s ease-in-out; }
+
+    /* ===== 3D CLICK RIPPLE ===== */
+    .seismic-ripple {
+      position: fixed;
+      border-radius: 50%;
+      border: 2px solid rgba(249, 115, 22, 0.6);
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%) scale(0);
+      animation: seismicRippleAnim 0.8s ease-out forwards;
+    }
+    @keyframes seismicRippleAnim {
+      to { transform: translate(-50%, -50%) scale(4); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- THREE.JS BACKGROUND CANVAS -->
+  <canvas id="three-canvas"></canvas>
+
+  <!-- Ambient glows (on top of three.js, below content) -->
+  <div class="ambient-background">
+    <div class="glowing-orb orb-orange"></div>
+    <div class="glowing-orb orb-cyan"></div>
+  </div>
+
+  <!-- Navigation -->
+  <header class="navbar">
+    <div class="navbar-container">
+      <a href="#" class="nav-brand">
+        <div class="nav-logo">
+          <picture>
+            <source srcset="assets/seismic.png" type="image/png">
+            <img src="assets/logo.svg" alt="Seismic Logo" style="width:28px; height:28px; display:block;" />
+          </picture>
+        </div>
+        <div class="nav-title">SEISMIC<span>VOTE</span></div>
+      </a>
+      <div class="nav-actions">
+        <div id="networkIndicator" class="network-pill wrong-chain" onclick="checkAndSwitchNetwork()">
+          <span class="pulse-dot"></span> <span id="networkText">Unsupported Network</span>
+        </div>
+        <div id="walletWrapper">
+          <button id="connectBtn" class="connect-btn" onclick="connectWallet()">
+            <i data-lucide="wallet" style="width: 18px; height: 18px;"></i>
+            Connect Wallet
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Contract Banner -->
+    <div id="contractMissingBanner" class="contract-missing-banner" style="display: none;">
+      <div class="banner-content">
+        <i data-lucide="alert-triangle" class="banner-icon"></i>
+        <div class="banner-text">
+          <strong>Smart Contract Not Detected on Seismic:</strong> The Voting Smart Contract is not deployed at the specified address on this chain. You must deploy it first to enable registration and voting.
+        </div>
+        <button class="btn-deploy-contract" onclick="deployVotingContract()" style="margin-left:auto">
+          <i data-lucide="rocket"></i> Deploy via MetaMask
+        </button>
+      </div>
+    </div>
+
+    <!-- HERO with inline 3D canvas -->
+    <section class="hero">
+      <!-- Floating 3D icosahedron rendered here -->
+      <div class="hero-canvas-wrap">
+        <canvas id="hero-canvas"></canvas>
+      </div>
+      <span class="hero-pretitle">Governance Portal</span>
+      <h1 class="hero-title">Seismic Governance Dashboard</h1>
+      <p class="hero-subtitle">Register candidates, cast real-time votes, and audit voting percentages with sub-second EVM transaction finality.</p>
+    </section>
+
+    <!-- Stats -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon"><i data-lucide="zap" style="width: 24px; height: 24px;"></i></div>
+        <div class="stat-details">
+          <div class="stat-value">500 ms</div>
+          <div class="stat-label">Block Time</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><i data-lucide="shield-check" style="width: 24px; height: 24px;"></i></div>
+        <div class="stat-details">
+          <div class="stat-value">1 Block</div>
+          <div class="stat-label">Finality</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><i data-lucide="coins" style="width: 24px; height: 24px;"></i></div>
+        <div class="stat-details">
+          <div class="stat-value">SEIS</div>
+          <div class="stat-label">Gas Currency</div>
+          <a href="https://community-faucet.seismictest.net/" target="_blank" class="stat-action-btn">
+            Get Faucet <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>
+          </a>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><i data-lucide="search" style="width: 24px; height: 24px;"></i></div>
+        <div class="stat-details">
+          <div class="stat-value">SocialScan</div>
+          <div class="stat-label">Block Explorer</div>
+          <a href="https://seismic-testnet.socialscan.io/" target="_blank" class="stat-action-btn">
+            Open Explorer <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Grid -->
+    <div class="grid-main">
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">
+            <i data-lucide="user-plus" style="width: 20px; height: 20px;"></i>
+            Register as Candidate
+          </h2>
+        </div>
+        <div class="pfp-preview-container" id="pfpPreviewBox">
+          <img id="pfpPreview" class="pfp-preview-img" src="" alt="Avatar Preview" />
+          <div class="pfp-preview-info">
+            <span class="pfp-preview-name" id="pfpPreviewHandle">@username</span>
+            <span class="pfp-preview-status">
+              <i data-lucide="check" style="width: 12px; height: 12px;"></i> PFP Fetched Successfully
+            </span>
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="regName">Candidate Name</label>
+          <div class="input-field-wrap">
+            <i data-lucide="user" style="width: 18px; height: 18px;"></i>
+            <input type="text" id="regName" placeholder="Enter your full name or moniker..." />
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="regImage">Twitter Handle (optional pfp)</label>
+          <div class="input-field-wrap" style="gap: 12px;">
+            <i data-lucide="twitter" style="width: 18px; height: 18px;"></i>
+            <input type="text" id="regImage" placeholder="@your_twitter_handle" style="flex: 1;" oninput="debouncedFetchPfp()" />
+            <button class="btn btn-secondary" style="padding: 14px 20px;" onclick="previewPfp()">Fetch PFP</button>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button id="registerBtn" class="btn btn-primary" onclick="registerCandidate()">
+            <i data-lucide="check-square" style="width: 18px; height: 18px;"></i>
+            Register Candidate
+          </button>
+          <button class="btn btn-secondary" onclick="loadCandidates(true)">
+            <i data-lucide="rotate-cw" id="refreshIcon" style="width: 16px; height: 16px;"></i>
+            Refresh Data
+          </button>
+        </div>
+      </section>
+
+      <section class="rules-card">
+        <h2 class="panel-title" style="font-size: 1.15rem;">
+          <i data-lucide="info" style="width: 18px; height: 18px; color: var(--indigo);"></i>
+          Dashboard Rules & Info
+        </h2>
+        <div class="rule-item">
+          <div class="rule-bullet">1</div>
+          <div class="rule-content">
+            <span class="rule-title">Correct Chain Mandatory</span>
+            <span class="rule-desc">Make sure you are connected to the Seismic Testnet (Chain ID 5124) via MetaMask. Our portal will guide you to switch instantly.</span>
+          </div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-bullet">2</div>
+          <div class="rule-content">
+            <span class="rule-title">One Candidate Per Wallet</span>
+            <span class="rule-desc">Each unique wallet address can only register as a candidate once. The candidate fee is covered by Seismic's ultra-low gas rates!</span>
+          </div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-bullet">3</div>
+          <div class="rule-content">
+            <span class="rule-title">3-Vote Limit (Unique Candidates Only)</span>
+            <span class="rule-desc">Each unique wallet address can cast up to 3 votes on-chain. You can only vote for the same candidate once, so distribute your votes across 3 different candidates!</span>
+          </div>
+        </div>
+        <div class="rule-item" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+          <div class="rule-bullet" style="background: rgba(99, 102, 241, 0.2); color: var(--indigo); font-size: 0.8rem;"><i data-lucide="cpu" style="width: 14px; height: 14px;"></i></div>
+          <div class="rule-content" style="width: 100%;">
+            <span class="rule-title">Active Smart Contract</span>
+            <span class="rule-desc" style="font-family: var(--font-mono); font-size: 0.8rem; word-break: break-all; color: var(--cyan);" id="activeContractAddr">Loading...</span>
+            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.75rem; margin-top: 8px; width: fit-content;" onclick="resetSavedContract()">
+              <i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i> Clear Saved Contract
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Candidates Section -->
+    <section>
+      <div class="section-header">
+        <h2 class="section-title">
+          <i data-lucide="award" style="width: 22px; height: 22px;"></i>
+          Active Candidates
+        </h2>
+        <span class="section-count" id="candidateCountBadge">0 Candidates</span>
+      </div>
+      <div class="candidates-section-layout">
+        <div class="panel leaderboard-panel" id="leaderboardPanel">
+          <h3 class="panel-title" style="margin-bottom: 20px; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="trophy" style="color: var(--warning); width: 20px; height: 20px;"></i>
+            Live Leaderboard
+          </h3>
+          <div class="leaderboard-list" id="leaderboardList">
+            <div class="empty-state" style="padding: 24px 0; border: none; background: transparent;">
+              <i data-lucide="loader" class="spin-slow" style="width: 24px; height: 24px;"></i>
+              <span class="empty-desc" style="font-size: 0.85rem;">Ranking candidates...</span>
+            </div>
+          </div>
+        </div>
+        <div class="candidates-grid" id="candidatesGrid" style="margin-bottom: 0;">
+          <div class="empty-state">
+            <i data-lucide="loader" class="spin-slow" style="width: 32px; height: 32px;"></i>
+            <span class="empty-title">Fetching Governance Entries</span>
+            <span class="empty-desc">Querying candidates directly from the Seismic blockchain contract...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Terminal -->
+    <section class="terminal-container">
+      <div class="terminal-header">
+        <div class="terminal-title">
+          <i data-lucide="terminal" style="width: 16px; height: 16px;"></i>
+          Seismic Blockchain Console
+        </div>
+        <div class="terminal-dots">
+          <div class="terminal-dot terminal-dot-red"></div>
+          <div class="terminal-dot terminal-dot-yellow"></div>
+          <div class="terminal-dot terminal-dot-green"></div>
+        </div>
+      </div>
+      <div class="terminal-body" id="consoleOutput">
+        <div class="log-line log-info">
+          <span class="log-time">[12:00:00]</span> <span class="log-badge">[BOOT]</span> Console initialized. Connecting to Seismic Testnet node RPC...
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+        <p style="display:flex; align-items:center; gap:10px; justify-content:center;">
+        <picture>
+          <source srcset="assets/seismic.png" type="image/png">
+          <img src="assets/logo.svg" alt="Seismic Logo" style="width:28px; height:28px; display:inline-block;" />
+        </picture>
+        <span>&copy; 2026 Seismic Governance Portal. Built on EVM L1 High Performance Chain.</span>
+      </p>
+      <div class="footer-links">
+        <a href="https://seismic-testnet.socialscan.io/" target="_blank" class="footer-link">Explorer</a>
+        <span style="color: var(--border-color)">&bull;</span>
+        <a href="https://community-faucet.seismictest.net/" target="_blank" class="footer-link">Faucet</a>
+        <span style="color: var(--border-color)">&bull;</span>
+        <a href="https://gcp-2.seismictest.net/rpc" target="_blank" class="footer-link">JSON-RPC</a>
+      </div>
+    </footer>
+
+  </main>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ======================================================
+       THREE.JS 3D SCENE
+  ====================================================== -->
+  <script>
+  (function() {
+    if (typeof THREE === 'undefined') return;
+
+    // ---- MAIN BACKGROUND SCENE ----
+    const canvas = document.getElementById('three-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 8, 28);
+    camera.lookAt(0, 0, 0);
+
+    function resize() {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // ---- SEISMIC GROUND GRID ----
+    const GRID_SIZE = 40;
+    const GRID_DIV = 30;
+    const gridGeom = new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE, GRID_DIV, GRID_DIV);
+    gridGeom.rotateX(-Math.PI / 2);
+
+    const gridMat = new THREE.MeshBasicMaterial({
+      color: 0xf97316,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.08
+    });
+    const grid = new THREE.Mesh(gridGeom, gridMat);
+    grid.position.y = -4;
+    scene.add(grid);
+
+    // Store original Y positions for wave animation
+    const posArray = gridGeom.attributes.position.array;
+    const origY = new Float32Array(posArray.length / 3);
+    for (let i = 0; i < posArray.length / 3; i++) {
+      origY[i] = posArray[i * 3 + 1];
+    }
+
+    // ---- PARTICLE FIELD ----
+    const particleCount = 180;
+    const pGeom = new THREE.BufferGeometry();
+    const pPositions = new Float32Array(particleCount * 3);
+    const pSpeeds = new Float32Array(particleCount);
+
+    for (let i = 0; i < particleCount; i++) {
+      pPositions[i * 3]     = (Math.random() - 0.5) * 60;
+      pPositions[i * 3 + 1] = Math.random() * 30 - 4;
+      pPositions[i * 3 + 2] = (Math.random() - 0.5) * 40;
+      pSpeeds[i] = 0.002 + Math.random() * 0.004;
+    }
+    pGeom.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+
+    const pMat = new THREE.PointsMaterial({
+      color: 0xf97316,
+      size: 0.12,
+      transparent: true,
+      opacity: 0.55,
+      sizeAttenuation: true
+    });
+    const particles = new THREE.Points(pGeom, pMat);
+    scene.add(particles);
+
+    // ---- FLOATING DIAMOND SHARDS (small icosahedra) ----
+    const shards = [];
+    const shardMat = new THREE.MeshBasicMaterial({
+      color: 0x06b6d4,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.25
+    });
+
+    for (let i = 0; i < 6; i++) {
+      const g = new THREE.IcosahedronGeometry(0.3 + Math.random() * 0.4, 0);
+      const m = new THREE.Mesh(g, shardMat.clone());
+      m.position.set(
+        (Math.random() - 0.5) * 30,
+        Math.random() * 10,
+        (Math.random() - 0.5) * 15
+      );
+      m.userData.rotSpeed = {
+        x: (Math.random() - 0.5) * 0.015,
+        y: (Math.random() - 0.5) * 0.02,
+        z: (Math.random() - 0.5) * 0.01
+      };
+      m.userData.floatOffset = Math.random() * Math.PI * 2;
+      m.userData.floatSpeed = 0.3 + Math.random() * 0.4;
+      m.userData.baseY = m.position.y;
+      scene.add(m);
+      shards.push(m);
+    }
+
+    // ---- SHOCKWAVE RINGS (triggered on click) ----
+    const rings = [];
+
+    function spawnRing(x, y, z) {
+      const geo = new THREE.RingGeometry(0.1, 0.25, 32);
+      geo.rotateX(-Math.PI / 2);
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xf97316,
+        transparent: true,
+        opacity: 0.8,
+        side: THREE.DoubleSide
+      });
+      const ring = new THREE.Mesh(geo, mat);
+      ring.position.set(x, -3.9, z);
+      ring.userData.age = 0;
+      scene.add(ring);
+      rings.push(ring);
+    }
+
+    // Spawn a periodic random ring on the grid
+    setInterval(() => {
+      const x = (Math.random() - 0.5) * 20;
+      const z = (Math.random() - 0.5) * 20;
+      spawnRing(x, 0, z);
+    }, 2200);
+
+    // Click-triggered CSS ripple + 3D ring
+    document.addEventListener('click', (e) => {
+      // CSS ripple
+      const ripple = document.createElement('div');
+      ripple.className = 'seismic-ripple';
+      ripple.style.left = e.clientX + 'px';
+      ripple.style.top = e.clientY + 'px';
+      ripple.style.width = '60px';
+      ripple.style.height = '60px';
+      document.body.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 900);
+
+      // 3D ring at approximate world position
+      const nx = ((e.clientX / window.innerWidth) - 0.5) * 28;
+      const nz = ((e.clientY / window.innerHeight) - 0.5) * 14;
+      spawnRing(nx, 0, nz);
+    });
+
+    // ---- MOUSE PARALLAX ----
+    let mouseX = 0, mouseY = 0;
+    document.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+      mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+    });
+
+    // ---- ANIMATION LOOP ----
+    let t = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      t += 0.016;
+
+      // Seismic wave on grid
+      for (let i = 0; i < posArray.length / 3; i++) {
+        const x = posArray[i * 3];
+        const z = posArray[i * 3 + 2];
+        const dist = Math.sqrt(x * x + z * z);
+        posArray[i * 3 + 1] = origY[i] + Math.sin(dist * 0.5 - t * 1.8) * 0.35 * Math.exp(-dist * 0.07);
+      }
+      gridGeom.attributes.position.needsUpdate = true;
+
+      // Particle drift
+      for (let i = 0; i < particleCount; i++) {
+        pPositions[i * 3 + 1] += pSpeeds[i];
+        if (pPositions[i * 3 + 1] > 28) {
+          pPositions[i * 3 + 1] = -4;
+        }
+      }
+      pGeom.attributes.position.needsUpdate = true;
+
+      // Shard rotation + float
+      shards.forEach(s => {
+        s.rotation.x += s.userData.rotSpeed.x;
+        s.rotation.y += s.userData.rotSpeed.y;
+        s.rotation.z += s.userData.rotSpeed.z;
+        s.position.y = s.userData.baseY + Math.sin(t * s.userData.floatSpeed + s.userData.floatOffset) * 0.5;
+      });
+
+      // Ring expand + fade
+      for (let i = rings.length - 1; i >= 0; i--) {
+        const r = rings[i];
+        r.userData.age += 0.03;
+        const s = 1 + r.userData.age * 8;
+        r.scale.set(s, 1, s);
+        r.material.opacity = Math.max(0, 0.8 - r.userData.age);
+        if (r.userData.age >= 1) {
+          scene.remove(r);
+          rings.splice(i, 1);
+        }
+      }
+
+      // Subtle camera parallax
+      camera.position.x += (mouseX * 2.5 - camera.position.x) * 0.02;
+      camera.position.y += (-mouseY * 1.5 + 8 - camera.position.y) * 0.02;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // ---- HERO CANVAS — Spinning Icosahedron ----
+    const heroCanvas = document.getElementById('hero-canvas');
+    if (heroCanvas) {
+      const hRenderer = new THREE.WebGLRenderer({ canvas: heroCanvas, antialias: true, alpha: true });
+      hRenderer.setClearColor(0x000000, 0);
+      hRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      hRenderer.setSize(400, 400);
+
+      const hScene = new THREE.Scene();
+      const hCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+      hCamera.position.z = 3;
+
+      // Outer wireframe
+      const icoGeo = new THREE.IcosahedronGeometry(1, 1);
+      const icoMat = new THREE.MeshBasicMaterial({
+        color: 0xf97316,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.35
+      });
+      const ico = new THREE.Mesh(icoGeo, icoMat);
+      hScene.add(ico);
+
+      // Inner solid with slight orange glow
+      const icoInner = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(0.65, 0),
+        new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.07 })
+      );
+      hScene.add(icoInner);
+
+      // Cyan wireframe orbit ring
+      const ringGeo = new THREE.TorusGeometry(1.4, 0.012, 6, 80);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.3 });
+      const orbitRing = new THREE.Mesh(ringGeo, ringMat);
+      orbitRing.rotation.x = Math.PI / 3;
+      hScene.add(orbitRing);
+
+      // Second ring
+      const orbitRing2 = new THREE.Mesh(
+        new THREE.TorusGeometry(1.6, 0.008, 6, 80),
+        new THREE.MeshBasicMaterial({ color: 0xec4899, transparent: true, opacity: 0.2 })
+      );
+      orbitRing2.rotation.x = -Math.PI / 5;
+      orbitRing2.rotation.z = Math.PI / 4;
+      hScene.add(orbitRing2);
+
+      // Tiny orbiting dot
+      const dotGeo = new THREE.SphereGeometry(0.04, 8, 8);
+      const dotMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
+      const dot = new THREE.Mesh(dotGeo, dotMat);
+      hScene.add(dot);
+
+      let ht = 0;
+      function heroAnimate() {
+        requestAnimationFrame(heroAnimate);
+        ht += 0.01;
+
+        ico.rotation.y += 0.007;
+        ico.rotation.x += 0.004;
+        icoInner.rotation.y -= 0.009;
+        icoInner.rotation.z += 0.005;
+
+        orbitRing.rotation.z += 0.005;
+        orbitRing2.rotation.y += 0.006;
+
+        // Dot orbiting
+        dot.position.x = Math.cos(ht * 1.2) * 1.4;
+        dot.position.y = Math.sin(ht * 1.2) * Math.sin(Math.PI / 3) * 1.4;
+        dot.position.z = Math.sin(ht * 1.2) * Math.cos(Math.PI / 3) * 1.4;
+
+        hRenderer.render(hScene, hCamera);
+      }
+      heroAnimate();
+    }
+
+  })();
+  </script>
+
+  <!-- ======================================================
+       DAPP LOGIC (unchanged from original)
+  ====================================================== -->
+  <script>
+    let CONTRACT = localStorage.getItem('SEISMIC_VOTE_CONTRACT') || "0x2a92f03339c594da985932295811c212c0dfd5df";
+    const RPC = "https://gcp-2.seismictest.net/rpc";
+    const CONTRACT_BYTECODE = "0x6080604052348015600e575f5ffd5b50335f5f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555060015f60146101000a81548160ff021916908315150217905550611762806100755f395ff3fe608060405234801561000f575f5ffd5b50600436106100b2575f3560e01c80634fab728a1161006f5780634fab728a146101a25780638da5cb5b146101d2578063a95824b4146101f0578063aae3bd471461020e578063b4153c6214610218578063c3c5a54714610248576100b2565b80630121b93f146100b657806309eef43e146100d25780630dbce4dd1461010257806330a563471461011e5780633477ee2e1461013c57806335b8e8201461016f575b5f5ffd5b6100d060048036038101906100cb9190610cfb565b610278565b005b6100ec60048036038101906100e79190610d80565b610550565b6040516100f99190610dc5565b60405180910390f35b61011c60048036038101906101179190610f1a565b61059a565b005b6101266107df565b6040516101339190610f9f565b60405180910390f35b61015660048036038101906101519190610cfb565b6107eb565b6040516101669493929190611041565b60405180910390f35b61018960048036038101906101849190610cfb565b610951565b6040516101999493929190611041565b60405180910390f35b6101bc60048036038101906101b79190611092565b610b6d565b6040516101c99190610dc5565b60405180910390f35b6101da610b97565b6040516101e791906110d0565b60405180910390f35b6101f8610bbb565b6040516102059190610dc5565b60405180910390f35b610216610bcd565b005b610232600480360381019061022d9190610d80565b610c85565b60405161023f9190610f9f565b60405180910390f35b610262600480360381019061025d9190610d80565b610c9a565b60405161026f9190610dc5565b60405180910390f35b5f60149054906101000a900460ff166102c6576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016102bd90611133565b60405180910390fd5b600360025f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205410610346576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161033d9061119b565b60405180910390fd5b60045f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205f8281526020019081526020015f205f9054906101000a900460ff16156103df576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016103d690611203565b60405180910390fd5b6001805490508110610426576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161041d9061126b565b60405180910390fd5b6001818154811061043a57610439611289565b5b905f5260205f2090600402016003015f815480929190610459906112e3565b919050555060025f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205f8154809291906104ab906112e3565b9190505550600160045f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205f8381526020019081526020015f205f6101000a81548160ff0219169083151502179055507f4d99b957a2bc29a30ebd96a7be8e68fe50a3c701db28a91436490b7d53870ca4338260405161054592919061132a565b60405180910390a150565b5f600360025f8473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205410159050919050565b5f60149054906101000a900460ff166105e8576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016105df90611133565b60405180910390fd5b60035f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205f9054906101000a900460ff1615610672576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016106699061139b565b60405180910390fd5b600160405180608001604052808481526020013373ffffffffffffffffffffffffffffffffffffffff1681526020018381526020015f815250908060018154018082558091505060019003905f5260205f2090600402015f909190919091505f820151815f0190816106e491906115c7565b506020820151816001015f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550604082015181600201908161074091906115c7565b50606082015181600301555050600160035f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205f6101000a81548160ff0219169083151502179055507fd13c0f94040a8ce9625a1aaefda862d7aa4723f25aab59446f073da43dd8229382336040516107d3929190611696565b60405180910390a15050565b5f600180549050905090565b600181815481106107fa575f80fd5b905f5260205f2090600402015f91509050805f018054610819906113e6565b80601f0160208091040260200160405190810160405280929190818152602001828054610845906113e6565b80156108905780601f1061086757610100808354040283529160200191610890565b820191905f5260205f20905b81548152906001019060200180831161087357829003601f168201915b505050505090806001015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff16908060020180546108ca906113e6565b80601f01602080910402602001604051908101604052809291908181526020018280546108f6906113e6565b80156109415780601f1061091857610100808354040283529160200191610941565b820191905f5260205f20905b81548152906001019060200180831161092457829003601f168201915b5050505050908060030154905084565b60605f60605f600180549050851061099e576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016109959061126b565b60405180910390fd5b600185815481106109b2576109b1611289565b5b905f5260205f2090600402015f01600186815481106109d4576109d3611289565b5b905f5260205f2090600402016001015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1660018781548110610a1757610a16611289565b5b905f5260205f20906004020160020160018881548110610a3a57610a39611289565b5b905f5260205f20906004020160030154838054610a56906113e6565b80601f0160208091040260200160405190810160405280929190818152602001828054610a82906113e6565b8015610acd5780601f10610aa457610100808354040283529160200191610acd565b820191905f5260205f20905b815481529060010190602001808311610ab057829003601f168201915b50505050509350818054610ae0906113e6565b80601f0160208091040260200160405190810160405280929190818152602001828054610b0c906113e6565b8015610b575780601f10610b2e57610100808354040283529160200191610b57565b820191905f5260205f20905b815481529060010190602001808311610b3a57829003601f168201915b5050505050915093509350935093509193509193565b6004602052815f5260405f20602052805f5260405f205f915091509054906101000a900460ff1681565b5f5f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b5f60149054906101000a900460ff1681565b5f5f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff1614610c5b576040517f08c379a0000000000000000000000000000000000000000000000000000000008152600401610c529061170e565b60405180910390fd5b5f60149054906101000a900460ff16155f60146101000a81548160ff021916908315150217905550565b6002602052805f5260405f205f915090505481565b6003602052805f5260405f205f915054906101000a900460ff1681565b5f604051905090565b5f5ffd5b5f5ffd5b5f819050919050565b610cda81610cc8565b8114610ce4575f5ffd5b50565b5f81359050610cf581610cd1565b92915050565b5f60208284031215610d1057610d0f610cc0565b5b5f610d1d84828501610ce7565b91505092915050565b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f610d4f82610d26565b9050919050565b610d5f81610d45565b8114610d69575f5ffd5b50565b5f81359050610d7a81610d56565b92915050565b5f60208284031215610d9557610d94610cc0565b5b5f610da284828501610d6c565b91505092915050565b5f8115159050919050565b610dbf81610dab565b82525050565b5f602082019050610dd85f830184610db6565b92915050565b5f5ffd5b5f5ffd5b5f601f19601f8301169050919050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b610e2c82610de6565b810181811067ffffffffffffffff82111715610e4b57610e4a610df6565b5b80604052505050565b5f610e5d610cb7565b9050610e698282610e23565b919050565b5f67ffffffffffffffff821115610e8857610e87610df6565b5b610e9182610de6565b9050602081019050919050565b828183375f83830152505050565b5f610ebe610eb984610e6e565b610e54565b905082815260208101848484011115610eda57610ed9610de2565b5b610ee5848285610e9e565b509392505050565b5f82601f830112610f0157610f00610dde565b5b8135610f11848260208601610eac565b91505092915050565b5f5f60408385031215610f3057610f2f610cc0565b5b5f83013567ffffffffffffffff811115610f4d57610f4c610cc4565b5b610f5985828601610eed565b925050602083013567ffffffffffffffff811115610f7a57610f79610cc4565b5b610f8685828601610eed565b9150509250929050565b610f9981610cc8565b82525050565b5f602082019050610fb25f830184610f90565b92915050565b5f81519050919050565b5f82825260208201905092915050565b5f5b83811015610fef578082015181840152602081019050610fd4565b5f8484015250505050565b5f61100482610fb8565b61100e8185610fc2565b935061101e818560208601610fd2565b61102781610de6565b840191505092915050565b61103b81610d45565b82525050565b5f6080820190508181035f8301526110598187610ffa565b90506110686020830186611032565b818103604083015261107a8185610ffa565b90506110896060830184610f90565b95945050505050565b5f5f604083850312156110a8576110a7610cc0565b5b5f6110b585828601610d6c565b92505060206110c685828601610ce7565b9150509250929050565b5f6020820190506110e35f830184611032565b92915050565b7f566f74696e6720697320636c6f736564000000000000000000000000000000005f82015250565b5f61111d601083610fc2565b9150611128826110e9565b602082019050919050565b5f6020820190508181035f83015261114a81611111565b9050919050565b7f4d6178203320766f74657320616c6c6f776564000000000000000000000000005f82015250565b5f611185601383610fc2565b915061119082611151565b602082019050919050565b5f6020820190508181035f8301526111b281611179565b9050919050565b7f416c726561647920766f74656420666f7220746869732063616e6469646174655f82015250565b5f6111ed602083610fc2565b91506111f8826111b9565b602082019050919050565b5f6020820190508181035f83015261121a816111e1565b9050919050565b7f496e76616c69642063616e6469646174650000000000000000000000000000005f82015250565b5f611255601183610fc2565b915061126082611221565b602082019050919050565b5f6020820190508181035f83015261128281611249565b9050919050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603260045260245ffd5b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b5f6112ed82610cc8565b91507fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff820361131f5761131e6112b6565b5b600182019050919050565b5f60408201905061133d5f830185611032565b61134a6020830184610f90565b9392505050565b7f416c7265616479207265676973746572656400000000000000000000000000005f82015250565b5f611385601283610fc2565b915061139082611351565b602082019050919050565b5f6020820190508181035f8301526113b281611379565b9050919050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52602260045260245ffd5b5f60028204905060018216806113fd57607f821691505b6020821081036114105761140f6113b9565b5b50919050565b5f819050815f5260205f209050919050565b5f6020601f8301049050919050565b5f82821b905092915050565b5f600883026114727fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff82611437565b61147c8683611437565b95508019841693508086168417925050509392505050565b5f819050919050565b5f6114b76114b26114ad84610cc8565b611494565b610cc8565b9050919050565b5f819050919050565b6114d08361149d565b6114e46114dc826114be565b848454611443565b825550505050565b5f5f905090565b6114fb6114ec565b6115068184846114c7565b505050565b5f5b8281101561152c576115215f8284016114f3565b60018101905061150d565b505050565b601f82111561157f578282111561157e5761154b81611416565b61155483611428565b61155d85611428565b602086101561156a575f90505b8083016115798284038261150b565b505050505b5b505050565b5f82821c905092915050565b5f61159f5f1984600802611584565b1980831691505092915050565b5f6115b78383611590565b9150826002028217905092915050565b6115d082610fb8565b67ffffffffffffffff8111156115e9576115e8610df6565b5b6115f382546113e6565b6115fe828285611531565b5f60209050601f83116001811461162f575f841561161d578287015190505b61162785826115ac565b86555061168e565b601f19841661163d86611416565b5f5b828110156116645784890151825560018201915060208501945060208101905061163f565b86831015611681578489015161167d601f891682611590565b8355505b6001600288020188555050505b505050505050565b5f6040820190508181035f8301526116ae8185610ffa565b90506116bd6020830184611032565b9392505050565b7f4f6e6c79206f776e6572000000000000000000000000000000000000000000005f82015250565b5f6116f8600a83610fc2565b9150611703826116c4565b602082019050919050565b5f6020820190508181035f830152611725816116ec565b905091905056fea2646970667358221220eb5661e153887dd5556d0248c5d013e1fe94298ec6aedb021189c17011fb346764736f6c63430008220033";
+
+    const SEISMIC_CHAIN_ID_HEX = "0x1404";
+    const SEISMIC_CHAIN_PARAMS = {
+      chainId: SEISMIC_CHAIN_ID_HEX,
+      chainName: "Seismic Testnet",
+      nativeCurrency: { name: "Seismic", symbol: "SEIS", decimals: 18 },
+      rpcUrls: [RPC],
+      blockExplorerUrls: ["https://seismic-testnet.socialscan.io/"]
+    };
+
+    let userAccount = null;
+    let candidatesList = [];
+    let isFetchingPfp = false;
+    let pfpDebounceTimer;
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      lucide.createIcons();
+      addLog("INFO", `Contract address detected: ${CONTRACT}`);
+      addLog("INFO", `RPC endpoint initialized: ${RPC}`);
+      await detectNetwork();
+      loadCandidates();
+      setupWeb3Listeners();
+    });
+
+    function addLog(type, message) {
+      const consoleEl = document.getElementById("consoleOutput");
+      if (!consoleEl) return;
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
+      let colorClass = "log-info";
+      if (type === "SUCCESS") colorClass = "log-success";
+      if (type === "ERROR") colorClass = "log-error";
+      if (type === "WARN") colorClass = "log-warn";
+      const logLine = document.createElement("div");
+      logLine.className = `log-line ${colorClass}`;
+      logLine.innerHTML = `<span class="log-time">[${timeStr}]</span> <span class="log-badge">[${type}]</span> ${message}`;
+      consoleEl.appendChild(logLine);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    function showToast(title, desc, type = "info") {
+      const container = document.getElementById("toastContainer");
+      if (!container) return null;
+      const toast = document.createElement("div");
+      toast.className = `toast toast-${type}`;
+      let icon = 'info';
+      if (type === 'success') icon = 'check-circle-2';
+      if (type === 'error') icon = 'alert-triangle';
+      if (type === 'loading') icon = 'loader-2';
+      toast.innerHTML = `
+        <div class="toast-icon"><i data-lucide="${icon}" class="${type === 'loading' ? 'spin-slow' : ''}"></i></div>
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          <div class="toast-desc">${desc}</div>
+        </div>
+        <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+      `;
+      container.appendChild(toast);
+      lucide.createIcons();
+      if (type !== 'loading') {
+        setTimeout(() => {
+          toast.style.animation = 'toastOut 0.3s forwards';
+          toast.addEventListener('animationend', () => toast.remove());
+        }, 5000);
+      }
+      return toast;
+    }
+
+    function setupWeb3Listeners() {
+      if (!window.ethereum) { addLog("WARN", "MetaMask wallet not found. Read-only node operations enabled."); return; }
+      window.ethereum.on('chainChanged', async (chainId) => {
+        addLog("WARN", `MetaMask detected network chain swap: ${chainId}`);
+        await detectNetwork();
+        if (userAccount) await updateWalletInfo(userAccount);
+      });
+      window.ethereum.on('accountsChanged', async (accounts) => {
+        if (accounts.length > 0) {
+          userAccount = accounts[0];
+          addLog("INFO", `MetaMask wallet swapped account: ${userAccount}`);
+          await updateWalletInfo(userAccount);
+          showToast("Account Swapped", `Connected address: ${userAccount.slice(0, 6)}...${userAccount.slice(-4)}`, "info");
+          loadCandidates();
+        } else {
+          userAccount = null;
+          addLog("WARN", "MetaMask wallet disconnected by user.");
+          resetWalletUI();
+          showToast("Wallet Disconnected", "Access credentials removed.", "info");
+        }
+      });
+    }
+
+    async function detectNetwork() {
+      const netIndicator = document.getElementById("networkIndicator");
+      const netText = document.getElementById("networkText");
+      if (!window.ethereum) { netIndicator.className = "network-pill wrong-chain"; netText.textContent = "RPC Mode (No Wallet)"; return false; }
+      try {
+        const chainId = await window.ethereum.request({ method: "eth_chainId" });
+        addLog("INFO", `Connected wallet Chain ID: ${chainId} (dec ${parseInt(chainId, 16)})`);
+        if (chainId === SEISMIC_CHAIN_ID_HEX) {
+          netIndicator.className = "network-pill correct-chain";
+          netText.textContent = "Seismic Testnet";
+          addLog("SUCCESS", "Network verified: Seismic Testnet matches perfect. System Fully Functional!");
+          return true;
+        } else {
+          netIndicator.className = "network-pill wrong-chain";
+          netText.textContent = "Wrong Network";
+          addLog("WARN", "Wrong blockchain connected in wallet. Click indicator to switch instantly.");
+          return false;
+        }
+      } catch (err) { addLog("ERROR", `Failed to parse wallet network state: ${err.message}`); return false; }
+    }
+
+    async function checkAndSwitchNetwork() {
+      if (!window.ethereum) { showToast("Wallet Missing", "Please install MetaMask to switch networks.", "error"); return false; }
+      addLog("INFO", "Initiating network switch to Seismic Testnet...");
+      try {
+        await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: SEISMIC_CHAIN_ID_HEX }] });
+        addLog("SUCCESS", "Successfully switched network to Seismic Testnet.");
+        await detectNetwork();
+        return true;
+      } catch (switchError) {
+        if (switchError.code === 4902) {
+          addLog("INFO", "Seismic Testnet not found in wallet configurations. Attempting to add parameters...");
+          try {
+            await window.ethereum.request({ method: "wallet_addEthereumChain", params: [SEISMIC_CHAIN_PARAMS] });
+            addLog("SUCCESS", "Seismic Testnet configured and switched inside MetaMask!");
+            await detectNetwork();
+            return true;
+          } catch (addError) {
+            addLog("ERROR", `Add-chain procedure failed: ${addError.message}`);
+            showToast("Network Add Failed", "User canceled network integration.", "error");
+            return false;
+          }
+        }
+        addLog("ERROR", `Network switch failed: ${switchError.message}`);
+        showToast("Switch Rejected", "Network swap was not accepted.", "error");
+        return false;
+      }
+    }
+
+    function resetWalletUI() {
+      const wrapper = document.getElementById("walletWrapper");
+      wrapper.innerHTML = `<button id="connectBtn" class="connect-btn" onclick="connectWallet()"><i data-lucide="wallet" style="width: 18px; height: 18px;"></i>Connect Wallet</button>`;
+      lucide.createIcons();
+    }
+
+    async function connectWallet() {
+      if (!window.ethereum) { showToast("MetaMask Required", "Please install MetaMask to interact with this dApp.", "error"); addLog("WARN", "Connect request canceled. Wallet software missing."); return; }
+      addLog("INFO", "Initializing wallet handshake...");
+      try {
+        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+        userAccount = accounts[0];
+        addLog("SUCCESS", `Handshake completed! Wallet address: ${userAccount}`);
+        const isCorrectChain = await detectNetwork();
+        if (!isCorrectChain) {
+          const switchSuccess = await checkAndSwitchNetwork();
+          if (!switchSuccess) { showToast("Network Misaligned", "Swapping to Seismic Testnet is required.", "warning"); addLog("WARN", "Access restricted due to network mismatch."); return; }
+        }
+        await updateWalletInfo(userAccount);
+        showToast("Connected Successfully", `Signed in as ${userAccount.slice(0, 6)}...${userAccount.slice(-4)}`, "success");
+        loadCandidates();
+      } catch (e) { addLog("ERROR", `Wallet login canceled: ${e.message}`); showToast("Access Denied", "Handshake signature was rejected.", "error"); }
+    }
+
+    async function updateWalletInfo(account) {
+      const wrapper = document.getElementById("walletWrapper");
+      let balance = "0.0000";
+      try {
+        const balanceHex = await window.ethereum.request({ method: "eth_getBalance", params: [account, "latest"] });
+        balance = (parseInt(balanceHex, 16) / 1e18).toFixed(4);
+      } catch (err) {
+        try { balance = await rpcCallEthBalance(account); } catch (rpcErr) { addLog("ERROR", "Failed to retrieve account balance."); }
+      }
+      wrapper.innerHTML = `<div class="wallet-badge"><span class="wallet-balance">${balance} SEIS</span><span class="wallet-address" title="${account}">${account.slice(0, 6)}...${account.slice(-4)}</span></div>`;
+      lucide.createIcons();
+    }
+
+    async function rpcCallEthBalance(account) {
+      try {
+        const res = await fetch(RPC, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getBalance", params: [account, "latest"], id: 1 }) });
+        const data = await res.json();
+        if (data.result) return (parseInt(data.result, 16) / 1e18).toFixed(4);
+      } catch (e) { console.error(e); }
+      return "0.0000";
+    }
+
+    async function rpcCall(data) {
+      const res = await fetch(RPC, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", method: "eth_call", params: [{ to: CONTRACT, data }, "latest"], id: 1 }) });
+      const resJson = await res.json();
+      if (resJson.error) throw new Error(resJson.error.message);
+      return resJson.result;
+    }
+
+    function encodeUint(n) { return n.toString(16).padStart(64, "0"); }
+    function decodeStr(hex, slotIndex) {
+      const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
+      const offset = parseInt(clean.slice(slotIndex * 64, slotIndex * 64 + 64), 16) * 2;
+      const len = parseInt(clean.slice(offset, offset + 64), 16) * 2;
+      const strHex = clean.slice(offset + 64, offset + 64 + len);
+      let str = "";
+      for (let i = 0; i < strHex.length; i += 2) str += String.fromCharCode(parseInt(strHex.substr(i, 2), 16));
+      return str;
+    }
+    function encodeAbiString(str) {
+      const len = encodeUint(str.length);
+      let hex = "";
+      for (let i = 0; i < str.length; i++) hex += str.charCodeAt(i).toString(16).padStart(2, "0");
+      while (hex.length % 64 !== 0) hex += "00";
+      return len + hex;
+    }
+
+    async function getCandidateCount() {
+      const res = await rpcCall("0x30a56347");
+      if (res === "0x" || !res) throw new Error("Contract code is empty");
+      return parseInt(res, 16);
+    }
+
+    async function getCandidate(i) {
+      const res = await rpcCall("0x35b8e820" + encodeUint(i));
+      if (res === "0x" || !res) throw new Error("Contract code is empty");
+      const clean = res.slice(2);
+      const name = decodeStr(res, 0);
+      const wallet = "0x" + clean.slice(64 + 24, 64 + 64);
+      const imageUrl = decodeStr(res, 2);
+      const voteCount = parseInt(clean.slice(192, 256), 16);
+      return { name, wallet, imageUrl, voteCount };
+    }
+
+    function copyAddress(address, event) {
+      event.stopPropagation();
+      navigator.clipboard.writeText(address).then(() => { showToast("Address Copied", "Wallet address has been sent to clipboard.", "success"); }).catch(err => console.error("Clipboard copy failed:", err));
+    }
+
+    async function loadCandidates(isManualRefresh = false) {
+      const grid = document.getElementById("candidatesGrid");
+      const badge = document.getElementById("candidateCountBadge");
+      const refreshIcon = document.getElementById("refreshIcon");
+      const leaderboardList = document.getElementById("leaderboardList");
+      if (isManualRefresh && refreshIcon) { refreshIcon.classList.add("spin-slow"); addLog("INFO", "Refreshing database manually from the Seismic blockchain..."); }
+      try {
+        const activeAddrEl = document.getElementById("activeContractAddr");
+        if (activeAddrEl) activeAddrEl.textContent = CONTRACT;
+        const count = await getCandidateCount();
+        setFormState(true);
+        badge.textContent = `${count} Candidate${count === 1 ? '' : 's'}`;
+        addLog("INFO", `Loading candidates from contract. Found: ${count} entries.`);
+        if (count === 0) {
+          grid.innerHTML = `<div class="empty-state"><i data-lucide="folder-open" style="width: 36px; height: 36px;"></i><span class="empty-title">No Candidates Registered</span><span class="empty-desc">There are currently no active governance entries. Be the first to register above!</span></div>`;
+          if (leaderboardList) leaderboardList.innerHTML = `<div class="empty-state" style="padding: 24px 0; border: none; background: transparent;"><i data-lucide="award" style="width: 24px; height: 24px; color: var(--text-muted);"></i><span class="empty-desc" style="font-size: 0.85rem;">No ranks available</span></div>`;
+          lucide.createIcons();
+          if (isManualRefresh && refreshIcon) refreshIcon.classList.remove("spin-slow");
+          return;
+        }
+        const fetchPromises = [];
+        for (let i = 0; i < count; i++) fetchPromises.push(getCandidate(i));
+        const candidates = await Promise.all(fetchPromises);
+        candidatesList = candidates;
+        const totalVotes = candidates.reduce((sum, c) => sum + c.voteCount, 0);
+        addLog("INFO", `Loaded candidate array details. Cumulative Votes cast: ${totalVotes}`);
+        grid.innerHTML = "";
+        candidates.forEach((c, index) => {
+          const imgSrc = c.imageUrl || "https://api.dicebear.com/7.x/identicon/svg?seed=" + c.wallet;
+          const percent = totalVotes > 0 ? ((c.voteCount / totalVotes) * 100).toFixed(1) : "0.0";
+          grid.innerHTML += `
+            <div class="candidate-card">
+              <div class="card-top">
+                <div class="candidate-avatar-wrap">
+                  <img class="candidate-avatar" src="${imgSrc}" onerror="this.src='https://api.dicebear.com/7.x/identicon/svg?seed=${index}'" alt="${c.name}" />
+                  <div class="candidate-online-badge"></div>
+                </div>
+                <div class="candidate-meta">
+                  <h3 class="candidate-name" title="${c.name}">${c.name}</h3>
+                  <div class="candidate-address" onclick="copyAddress('${c.wallet}', event)" title="Click to copy full address">
+                    <span>${c.wallet.slice(0, 6)}...${c.wallet.slice(-4)}</span>
+                    <i data-lucide="copy" style="width: 10px; height: 10px;"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="votes-display">
+                <div class="votes-count-row">
+                  <div class="votes-val">${c.voteCount} <span>Vote${c.voteCount === 1 ? '' : 's'}</span></div>
+                  <div class="votes-percent">${percent}%</div>
+                </div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${percent}%;"></div></div>
+              </div>
+              <button class="btn-vote" onclick="vote(${index})">
+                <i data-lucide="thumbs-up" style="width: 16px; height: 16px;"></i>
+                Cast On-Chain Vote
+              </button>
+            </div>`;
+        });
+        if (leaderboardList) {
+          leaderboardList.innerHTML = "";
+          const rankedCandidates = candidates.map((c, i) => ({ ...c, originalIndex: i })).sort((a, b) => b.voteCount - a.voteCount);
+          rankedCandidates.forEach((c, rankIndex) => {
+            const rank = rankIndex + 1;
+            const imgSrc = c.imageUrl || "https://api.dicebear.com/7.x/identicon/svg?seed=" + c.wallet;
+            const percent = totalVotes > 0 ? ((c.voteCount / totalVotes) * 100).toFixed(1) : "0.0";
+            let rankClass = "rank-other";
+            if (rank === 1) rankClass = "rank-1";
+            else if (rank === 2) rankClass = "rank-2";
+            else if (rank === 3) rankClass = "rank-3";
+            leaderboardList.innerHTML += `
+              <div class="leaderboard-item ${rankClass}">
+                <div class="rank-badge">${rank}</div>
+                <img class="leaderboard-avatar" src="${imgSrc}" onerror="this.src='https://api.dicebear.com/7.x/identicon/svg?seed=${c.originalIndex}'" alt="${c.name}" />
+                <div class="leaderboard-meta">
+                  <span class="leaderboard-name" title="${c.name}">${c.name}</span>
+                  <span class="leaderboard-percentage">${percent}% of total</span>
+                </div>
+                <div class="leaderboard-votes-wrap">
+                  <div class="leaderboard-votes">${c.voteCount} <span>Vote${c.voteCount === 1 ? '' : 's'}</span></div>
+                </div>
+                <div class="leaderboard-progress-bg"><div class="leaderboard-progress-fill" style="width: ${percent}%;"></div></div>
+              </div>`;
+          });
+        }
+        lucide.createIcons();
+        addLog("SUCCESS", "Candidates roster completely synchronised.");
+        if (isManualRefresh) showToast("Data Synchronized", "Successfully loaded fresh blockchain entries.", "success");
+      } catch (e) {
+        addLog("ERROR", `Failed loading candidates roster: ${e.message}`);
+        if (leaderboardList) leaderboardList.innerHTML = `<div class="empty-state" style="padding: 24px 0; border: none; background: transparent;"><i data-lucide="alert-circle" style="width: 24px; height: 24px; color: var(--error);"></i><span class="empty-desc" style="font-size: 0.85rem; color: var(--error);">Failed sorting ranks</span></div>`;
+        if (e.message.includes("Contract code is empty")) {
+          document.getElementById("contractMissingBanner").style.display = "block";
+          setFormState(false);
+          addLog("WARN", "Smart Contract is not deployed on Seismic Testnet!");
+          grid.innerHTML = `<div class="empty-state" style="border-color: rgba(245, 158, 11, 0.2)"><i data-lucide="help-circle" style="width: 36px; height: 36px; color: var(--warning);"></i><span class="empty-title" style="color: var(--warning)">Contract Uninitialized</span><span class="empty-desc">The voting smart contract is not deployed on Seismic Testnet. Click 'Deploy via MetaMask' at the top banner to initialize it!</span></div>`;
+        } else {
+          grid.innerHTML = `<div class="empty-state" style="border-color: rgba(239, 68, 68, 0.2)"><i data-lucide="alert-octagon" style="width: 36px; height: 36px; color: var(--error);"></i><span class="empty-title" style="color: var(--error)">Synchronization Error</span><span class="empty-desc">Failed fetching candidates from direct RPC. Details: ${e.message}</span></div>`;
+        }
+        lucide.createIcons();
+      } finally {
+        if (isManualRefresh && refreshIcon) setTimeout(() => refreshIcon.classList.remove("spin-slow"), 500);
+      }
+    }
+
+    async function deployVotingContract() {
+      if (!userAccount) { showToast("Wallet Connection Needed", "Please connect your MetaMask wallet first.", "warning"); connectWallet(); return; }
+      const isCorrectChain = await detectNetwork();
+      if (!isCorrectChain) { const switchSuccess = await checkAndSwitchNetwork(); if (!switchSuccess) return; }
+      const deployBtn = document.querySelector(".btn-deploy-contract");
+      const originalHtml = deployBtn.innerHTML;
+      try {
+        deployBtn.disabled = true;
+        deployBtn.innerHTML = `<i data-lucide="loader" class="spin-slow" style="width:16px;height:16px"></i> Deploying...`;
+        lucide.createIcons();
+        addLog("INFO", "Initiating smart contract deployment on Seismic Testnet via MetaMask...");
+        const loadingToast = showToast("Deploying Contract", "Please approve the contract deployment transaction in MetaMask...", "loading");
+        const txHash = await window.ethereum.request({ method: "eth_sendTransaction", params: [{ from: userAccount, to: null, data: CONTRACT_BYTECODE }] });
+        if (loadingToast) loadingToast.remove();
+        addLog("INFO", `Deployment transaction broadcast! Hash: ${txHash}. Waiting for block inclusion...`);
+        const waitingToast = showToast("Deploying", "Waiting for Seismic block confirmation (~500ms block time)...", "loading");
+        let receipt = null;
+        for (let i = 0; i < 15; i++) {
+          await new Promise(resolve => setTimeout(resolve, 800));
+          try { receipt = await window.ethereum.request({ method: "eth_getTransactionReceipt", params: [txHash] }); if (receipt) break; } catch (e) { console.log("Error fetching receipt:", e); }
+        }
+        if (waitingToast) waitingToast.remove();
+        if (receipt && receipt.contractAddress) {
+          const newAddress = receipt.contractAddress;
+          CONTRACT = newAddress;
+          localStorage.setItem('SEISMIC_VOTE_CONTRACT', newAddress);
+          addLog("SUCCESS", `Smart Contract successfully deployed at: ${newAddress}`);
+          showToast("Deployment Successful", `Contract deployed at: ${newAddress}`, "success");
+          setFormState(true);
+          document.getElementById("contractMissingBanner").style.display = "none";
+          setTimeout(loadCandidates, 1000);
+        } else {
+          addLog("ERROR", "Failed to retrieve deployed contract address from receipt.");
+          showToast("Deployment Error", "Could not verify contract address from receipt.", "error");
+        }
+      } catch (err) { addLog("ERROR", `Deployment transaction failed: ${err.message}`); showToast("Deployment Failed", err.message, "error"); }
+      finally { deployBtn.disabled = false; deployBtn.innerHTML = originalHtml; lucide.createIcons(); }
+    }
+
+    function setFormState(isEnabled) {
+      const registerBtn = document.getElementById("registerBtn");
+      const regNameInput = document.getElementById("regName");
+      const regImageInput = document.getElementById("regImage");
+      if (!registerBtn) return;
+      if (!isEnabled) { registerBtn.disabled = true; registerBtn.style.opacity = "0.5"; registerBtn.style.cursor = "not-allowed"; registerBtn.title = "Please deploy the contract first!"; if (regNameInput) regNameInput.disabled = true; if (regImageInput) regImageInput.disabled = true; }
+      else { registerBtn.disabled = false; registerBtn.style.opacity = "1"; registerBtn.style.cursor = "pointer"; registerBtn.title = ""; if (regNameInput) regNameInput.disabled = false; if (regImageInput) regImageInput.disabled = false; }
+    }
+
+    function resetSavedContract() {
+      localStorage.removeItem('SEISMIC_VOTE_CONTRACT');
+      CONTRACT = "0x2a92f03339c594da985932295811c212c0dfd5df";
+      addLog("WARN", "Saved contract address cleared from localStorage. Reset to default fallback.");
+      showToast("Address Cleared", "Cleared saved smart contract state. Please redeploy or register.", "info");
+      loadCandidates();
+    }
+
+    function debouncedFetchPfp() { clearTimeout(pfpDebounceTimer); pfpDebounceTimer = setTimeout(previewPfp, 700); }
+
+    function previewPfp() {
+      const field = document.getElementById("regImage");
+      const handle = field.value.trim().replace("@", "");
+      const previewBox = document.getElementById("pfpPreviewBox");
+      const previewImg = document.getElementById("pfpPreview");
+      const previewHandle = document.getElementById("pfpPreviewHandle");
+      if (!handle) { previewBox.style.display = "none"; return; }
+      isFetchingPfp = true;
+      addLog("INFO", `Querying Twitter avatar services for: @${handle}`);
+      const targetUrl = `https://unavatar.io/twitter/${handle}`;
+      previewImg.onload = function() { isFetchingPfp = false; previewBox.style.display = "flex"; previewHandle.textContent = `@${handle}`; addLog("SUCCESS", `Twitter avatar parsed perfectly for @${handle}`); };
+      previewImg.onerror = function() { isFetchingPfp = false; previewBox.style.display = "none"; addLog("WARN", `Failed to parse Twitter avatar for @${handle}.`); showToast("Avatar Not Found", "Failed fetching Twitter profile. Standard crypto identicon fallback applied.", "info"); };
+      previewImg.src = targetUrl;
+    }
+
+    async function registerCandidate() {
+      if (!userAccount) { showToast("Wallet Connected Needed", "Handshake with your MetaMask wallet is required before registration.", "warning"); connectWallet(); return; }
+      const isCorrectChain = await detectNetwork();
+      if (!isCorrectChain) { const switchSuccess = await checkAndSwitchNetwork(); if (!switchSuccess) return; }
+      const name = document.getElementById("regName").value.trim();
+      let username = document.getElementById("regImage").value.trim();
+      if (!name) { showToast("Required Fields Missing", "Please enter a valid candidate name.", "error"); return; }
+      let pfpUrl = "";
+      if (username) { username = username.replace("@", ""); pfpUrl = `https://unavatar.io/twitter/${username}`; }
+      const registerBtn = document.getElementById("registerBtn");
+      const originalHtml = registerBtn.innerHTML;
+      try {
+        registerBtn.disabled = true;
+        registerBtn.innerHTML = `<i data-lucide="loader" class="spin-slow" style="width:16px;height:16px"></i> Broadcasting...`;
+        lucide.createIcons();
+        addLog("INFO", `Building ABI payload: registerCandidate("${name}", "${pfpUrl}")`);
+        const nameEnc = encodeAbiString(name);
+        const imgEnc = encodeAbiString(pfpUrl);
+        const nameOffset = encodeUint(64);
+        const imgOffset = encodeUint(64 + 32 + Math.ceil(name.length / 32) * 32);
+        const payload = "0x0dbce4dd" + nameOffset + imgOffset + nameEnc + imgEnc;
+        const loadingToast = showToast("Transaction Initiated", "Accept network broadcast on your MetaMask interface...", "loading");
+        addLog("INFO", "Sending transaction eth_sendTransaction to MetaMask...");
+        const txHash = await window.ethereum.request({ method: "eth_sendTransaction", params: [{ from: userAccount, to: CONTRACT, data: payload }] });
+        if (loadingToast) loadingToast.remove();
+        addLog("SUCCESS", `Transaction broadcasted! Tx hash: ${txHash}`);
+        showToast("Broadcast Confirmed", `Transaction successfully sent to Seismic network.<br><a href="https://seismic-testnet.socialscan.io/tx/${txHash}" target="_blank" style="color:var(--cyan);text-decoration:underline;font-size:0.75rem;margin-top:4px;display:inline-block">View on Explorer</a>`, "success");
+        document.getElementById("regName").value = "";
+        document.getElementById("regImage").value = "";
+        document.getElementById("pfpPreviewBox").style.display = "none";
+        setTimeout(() => { loadCandidates(); updateWalletInfo(userAccount); }, 1500);
+      } catch (err) { addLog("ERROR", `Candidate registration failed: ${err.message}`); showToast("Registration Failed", err.message.includes("User denied") ? "Signature was rejected by user." : err.message, "error"); }
+      finally { registerBtn.disabled = false; registerBtn.innerHTML = originalHtml; lucide.createIcons(); }
+    }
+
+    async function vote(index) {
+      if (!userAccount) { showToast("Wallet Connection Needed", "Please connect your wallet before voting.", "warning"); connectWallet(); return; }
+      const isCorrectChain = await detectNetwork();
+      if (!isCorrectChain) { const switchSuccess = await checkAndSwitchNetwork(); if (!switchSuccess) return; }
+      const candidate = candidatesList[index];
+      const candidateName = candidate ? candidate.name : `Candidate #${index}`;
+      addLog("INFO", `Preparing voting payload for index: ${index} (${candidateName})...`);
+      try {
+        const loadingToast = showToast("Voting Pending", `Accept casting vote to ${candidateName} in your wallet...`, "loading");
+        const payload = "0x0121b93f" + encodeUint(index);
+        addLog("INFO", "Requesting signature via MetaMask eth_sendTransaction...");
+        const txHash = await window.ethereum.request({ method: "eth_sendTransaction", params: [{ from: userAccount, to: CONTRACT, data: payload }] });
+        if (loadingToast) loadingToast.remove();
+        addLog("SUCCESS", `Vote transaction broadcast successfully! Hash: ${txHash}`);
+        showToast("Vote Casting", `Cast confirmed for ${candidateName}!<br><a href="https://seismic-testnet.socialscan.io/tx/${txHash}" target="_blank" style="color:var(--cyan);text-decoration:underline;font-size:0.75rem;margin-top:4px;display:inline-block">Audit on Explorer</a>`, "success");
+        setTimeout(() => { loadCandidates(); updateWalletInfo(userAccount); }, 1500);
+      } catch (err) { addLog("ERROR", `Voting transaction failed: ${err.message}`); showToast("Vote Failed", err.message.includes("User denied") ? "Signature was rejected by user." : err.message, "error"); }
+    }
+  </script>
+  <script>
+  // Convert inline SVG logo to PNG data URL and replace img.src so a raster PNG is used when desired.
+  (async function svgLogoToPngFallback(){
+    function svgToPngDataUrl(svgText, w, h){
+      return new Promise((resolve, reject)=>{
+        const img = new Image();
+        const svgBlob = new Blob([svgText], {type: 'image/svg+xml;charset=utf-8'});
+        const url = URL.createObjectURL(svgBlob);
+        img.onload = () => {
+          try{
+            const canvas = document.createElement('canvas');
+            canvas.width = w || img.width || 128;
+            canvas.height = h || img.height || 128;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/png');
+            URL.revokeObjectURL(url);
+            resolve(dataUrl);
+          }catch(err){ URL.revokeObjectURL(url); reject(err); }
+        };
+        img.onerror = (e)=>{ URL.revokeObjectURL(url); reject(e); };
+        img.src = url;
+      });
+    }
+
+    try{
+      // fetch the SVG source used as fallback
+      const pngPath = 'assets/seismic.png';
+      const resp = await fetch(pngPath);
+      if(!resp.ok) return; // nothing to do
+      const svgText = await resp.text();
+
+      // find all images that currently use the svg fallback and replace with raster PNG data URL
+      const imgs = Array.from(document.querySelectorAll('img')).filter(i=> i.getAttribute('src') && i.getAttribute('src').endsWith('logo.svg'));
+      if(imgs.length === 0) return;
+
+      for(const img of imgs){
+        try{
+          const w = img.width || 96;
+          const h = img.height || 96;
+          const pngData = await svgToPngDataUrl(svgText, w, h);
+          img.src = pngData;
+        }catch(e){ console.warn('SVG->PNG conversion failed', e); }
+      }
+    }catch(e){ console.warn('Could not fetch or convert logo.svg', e); }
+  })();
+  </script>
+</body>
+</html>
